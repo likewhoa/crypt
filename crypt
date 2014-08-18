@@ -1,0 +1,98 @@
+#!/bin/bash
+
+IFS='
+'
+
+decrypt() {
+
+if [ ! -d $1 ]; then
+    echo "$1 is not a directory"
+    exit
+else
+
+[ -x $1 ] && busc=1
+
+  if [ 1 = "$busc" ]; then
+    echo "Directory to Decrypt Found!"
+  else
+    echo "Directory to Decrypt Not Found!"
+    exit
+  fi
+
+  busc=0
+  echo "$1 will be decrypted"
+
+fi
+
+stty -echo
+echo -n "Password: "
+read passwd
+stty echo
+echo
+
+for file in $(find $1 -type 'f' | grep -E "\.crypted$"); do
+  dest=$(echo $file|sed -e 's/\.crypted$//')
+  if [ "$dest" != "$file" ]; then
+    echo -n "Decrypting $file to $dest... "
+    if ( cat "$file" | mdecrypt -q -k $passwd > "$dest" ); then
+      echo "OK!"
+      echo "Deleting $file"
+      if ( rm -f  "$file" ); then
+        echo "OK!"
+      else
+        echo "Error deleting $file"
+      fi
+    else
+      echo " Error!"
+    fi
+  fi
+done
+}
+
+encrypt() {
+if [ ! -d $1 ]; then
+        echo "$1 is not a directory"
+        exit
+else
+
+[ -x $1 ] && busc=1
+
+        if [ 1 = "$busc" ]; then
+                echo "Directory to Encrypt Found!"
+        else
+                echo "Directory to Encrypt Not Found!"
+                exit
+        fi
+
+        busc=0
+        echo "$1 will be encrypted"
+fi
+
+echo "Enter Password"; read -rsp "" pwd1
+echo "Confirm the password"; read -rsp "" pwd2
+
+if [ "$pwd1" != "$pwd2" ]; then
+        echo "Passwords don't match"
+        exit
+fi
+
+for file in $(find $1 -type f|grep -v -E "\.crypted$"); do
+        dest="${file}.crypted"
+
+        if [ "$dest" != "$file" ]; then
+                echo -n "Encrypting $file to $dest..."
+                if ( cat "$file"|mcrypt -a blowfish -q -k $pwd1 > "$dest" ); then
+                        echo "OK!"
+                        echo "Deleting $file"
+                        rm -f "$file" 1&>1 || echo "Error Deleting."
+                fi
+        else
+                echo "$file is encrypted!"
+        fi
+done
+
+unset $pwd1
+unset $pwd2
+}
+
+"$@"
